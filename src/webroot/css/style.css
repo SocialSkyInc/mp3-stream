@@ -1,0 +1,10 @@
+.body {
+	background: #333;
+	text-align: center;
+	margin-top: 10%;
+}
+.audioCanvas {
+	/* Always stretch the canvas to 640x480, regardless of its internal size. */
+	width: 640px;
+	height: 480px;
+}
