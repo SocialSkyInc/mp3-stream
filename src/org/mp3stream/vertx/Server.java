@@ -25,8 +25,6 @@ import io.vertx.ext.web.handler.StaticHandler;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.Arrays;
-import java.util.function.Predicate;
 
 import org.mp3stream.mp3.Mp3FrameIterator;
 
@@ -81,15 +79,6 @@ public class Server extends AbstractVerticle
         private boolean enabled = true;
         private ServerWebSocket connection = null;
 
-        private Predicate<File> isFile = new Predicate<File>()
-        {
-            @Override
-            public boolean test(File t)
-            {
-                return t.isFile();
-            }
-        };
-
         Streamer(String path, int frameCount)
         {
             this.streamFolder = path;
@@ -105,7 +94,13 @@ public class Server extends AbstractVerticle
                 {
                     if (connection != null)
                     {
-                        Arrays.asList(new File(streamFolder).listFiles()).stream().filter(isFile).forEach(this::sentFrames);
+                        for (File file : new File(streamFolder).listFiles())
+                        {
+                            if (file.isFile())
+                            {
+                                sentFrames(file);
+                            }
+                        }
                         System.exit(0); // exit after all songs have been sent.
                     }
                     Thread.sleep(50);
@@ -130,7 +125,7 @@ public class Server extends AbstractVerticle
                     }
 
                     while (connection.writeQueueFull())
-                        Thread.sleep(1000);
+                        Thread.sleep(50);
 
                     connection.write(Buffer.buffer(baos.toByteArray()));
                 }
