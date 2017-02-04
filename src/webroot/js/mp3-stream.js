@@ -68,8 +68,8 @@ var sync = 0;
 
 // Play the audio.
 function play(audio) {
-	var source = context.createBufferSource();
 	context.decodeAudioData(audio, function(data) {
+		var source = context.createBufferSource();
 		source.buffer = data;
 		source.connect(context.destination);
 		sync = sync < context.currentTime ? context.currentTime : sync;

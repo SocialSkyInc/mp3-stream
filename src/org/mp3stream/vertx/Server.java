@@ -18,6 +18,8 @@ package org.mp3stream.vertx;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.file.AsyncFile;
+import io.vertx.core.file.OpenOptions;
 import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.streams.Pump;
 import io.vertx.ext.web.Router;
@@ -26,6 +28,8 @@ import io.vertx.ext.web.handler.StaticHandler;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.mp3stream.mp3.Mp3FrameIterator;
 
@@ -48,11 +52,19 @@ public class Server extends AbstractVerticle
     public void start() throws Exception
     {
         final Router router = Router.router(vertx);
-        final AsyncFolderReader pathReader = new AsyncFolderReader(new File(path));
 
         router.get("/stream").handler(ctx ->
         {
-            Pump.pump(pathReader, ctx.response().setChunked(true)).start();
+            vertx.fileSystem().readDir(path, ar ->
+            {
+                final List<String> result = ar.result();
+                final List<AsyncFile> files = new ArrayList<>();
+                for (String path : result)
+                {
+                    files.add(vertx.fileSystem().openBlocking(path, new OpenOptions()));
+                }
+                Pump.pump(new AsyncFileList(files), ctx.response().setChunked(true)).start();
+            });
         });
 
         router.route().handler(StaticHandler.create());
