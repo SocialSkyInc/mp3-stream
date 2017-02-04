@@ -19,6 +19,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.ServerWebSocket;
+import io.vertx.core.streams.Pump;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
 
@@ -31,13 +32,15 @@ import org.mp3stream.mp3.Mp3FrameIterator;
 public class Server extends AbstractVerticle
 {
     private static final int HTTP_PORT = 8080;
-    private static final int AUDIO_PORT = 8081;
+    private static final int WEBSOCKET_PORT = 8081;
 
+    private static String path;
     private static Streamer player;
 
     public static void init(String path, int frameCount)
     {
         player = new Streamer(path, frameCount);
+        Server.path = path;
         Vertx.vertx().deployVerticle(Server.class.getName());
     }
 
@@ -45,6 +48,12 @@ public class Server extends AbstractVerticle
     public void start() throws Exception
     {
         final Router router = Router.router(vertx);
+        final AsyncFolderReader pathReader = new AsyncFolderReader(new File(path));
+
+        router.get("/stream").handler(ctx ->
+        {
+            Pump.pump(pathReader, ctx.response().setChunked(true)).start();
+        });
 
         router.route().handler(StaticHandler.create());
 
@@ -55,7 +64,7 @@ public class Server extends AbstractVerticle
         vertx.createHttpServer().websocketHandler(ws ->
         {
             player.connection = ws;
-        }).listen(AUDIO_PORT);
+        }).listen(WEBSOCKET_PORT);
 
         // mp3 streamer thread.
         new Thread(player).start();
@@ -75,7 +84,7 @@ public class Server extends AbstractVerticle
         private final String streamFolder;
         // Number of frames to be sent together
         private final int frameCount;
-        
+
         private boolean enabled = true;
         private ServerWebSocket connection = null;
 
@@ -101,7 +110,8 @@ public class Server extends AbstractVerticle
                                 sentFrames(file);
                             }
                         }
-                        System.exit(0); // exit after all songs have been sent.
+                        // connection.close(); // close connection after all songs have been sent.
+                        connection = null;
                     }
                     Thread.sleep(50);
                 }
@@ -114,6 +124,9 @@ public class Server extends AbstractVerticle
 
         private void sentFrames(File song) throws RuntimeException
         {
+            // Sent the index of these frames to order at reception
+            int idx = 0;
+
             try (Mp3FrameIterator frames = new Mp3FrameIterator(new FileInputStream(song)))
             {
                 while (frames.hasNext())
@@ -127,7 +140,11 @@ public class Server extends AbstractVerticle
                     while (connection.writeQueueFull())
                         Thread.sleep(50);
 
-                    connection.write(Buffer.buffer(baos.toByteArray()));
+                    final Buffer buffer = Buffer.buffer();
+                    buffer.appendInt(idx++); // First 4 bytes : Index of these frames
+                    buffer.appendBytes(baos.toByteArray()); // rest : frames data
+
+                    connection.write(buffer);
                 }
             }
             catch (Exception e)

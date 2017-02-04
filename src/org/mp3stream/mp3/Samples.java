@@ -18,29 +18,43 @@ package org.mp3stream.mp3;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Table;
 
-public class SampleRate
+public class Samples
 {
     private static final Map<Version, int[]> sampleRates;
+    private static final Table<Version, Layer, Integer> samplePerFrame;
 
     static
     {
-        final Builder<Version, int[]> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<Version, int[]> builder1 = ImmutableMap.builder();
 
-        builder.put(Version.MPEG_1, new int[] { 44100, 48000, 32000 });
+        builder1.put(Version.MPEG_1, new int[] { 44100, 48000, 32000 });
+        builder1.put(Version.MPEG_2, new int[] { 22050, 24000, 16000 });
+        builder1.put(Version.MPEG_2_5, new int[] { 11025, 12000, 8000 });
 
-        builder.put(Version.MPEG_2, new int[] { 22050, 24000, 16000 });
+        sampleRates = builder1.build();
 
-        builder.put(Version.MPEG_2_5, new int[] { 11025, 12000, 8000 });
+        final ImmutableTable.Builder<Version, Layer, Integer> builder2 = ImmutableTable.builder();
 
-        sampleRates = builder.build();
+        builder2.put(Version.MPEG_1, Layer.LAYER_1, 384);
+        builder2.put(Version.MPEG_1, Layer.LAYER_2, 1152);
+        builder2.put(Version.MPEG_1, Layer.LAYER_3, 1152);
+        builder2.put(Version.MPEG_2, Layer.LAYER_1, 384);
+        builder2.put(Version.MPEG_2, Layer.LAYER_2, 1152);
+        builder2.put(Version.MPEG_2, Layer.LAYER_3, 576);
+        builder2.put(Version.MPEG_2_5, Layer.LAYER_1, 384);
+        builder2.put(Version.MPEG_2_5, Layer.LAYER_2, 1152);
+        builder2.put(Version.MPEG_2_5, Layer.LAYER_3, 576);
+
+        samplePerFrame = builder2.build();
     }
 
     /**
      * Obtains sample rate in Hz for the given parameters as present in the frame header.
      */
-    public static int of(Version version, int index)
+    public static int sampleRate(Version version, int index)
     {
         try
         {
@@ -50,5 +64,13 @@ public class SampleRate
         {
             throw new UnsupportedOperationException("Invalid header (sample rate index)");
         }
+    }
+
+    /**
+     * Obtains samples per frame given parameters as present in the frame header.
+     */
+    public static int samplesPerFrame(Version version, Layer layer)
+    {
+        return samplePerFrame.get(version, layer);
     }
 }

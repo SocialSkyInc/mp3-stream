@@ -84,7 +84,7 @@ public class Mp3FrameIterator implements Iterator<byte[]>, AutoCloseable
                 final Version version = Version.of(header >>> 19 & 0x3);
                 final Layer layer = Layer.of(header >>> 17 & 0x3);
                 final int bitrate_bps = Bitrate.of(version, layer, header >>> 12 & 0xF) * 1000;
-                final int samplerate_hz = SampleRate.of(version, header >>> 10 & 0x3);
+                final int samplerate_hz = Samples.sampleRate(version, header >>> 10 & 0x3);
                 final int padding = header >>> 9 & 0x1;
 
                 final int frameLength;
@@ -110,7 +110,7 @@ public class Mp3FrameIterator implements Iterator<byte[]>, AutoCloseable
         }
         return null;
     }
-    
+
     @Override
     public boolean hasNext()
     {
