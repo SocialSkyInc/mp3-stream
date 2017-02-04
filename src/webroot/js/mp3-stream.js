@@ -72,11 +72,9 @@ function play(audio) {
 	context.decodeAudioData(audio, function(data) {
 		source.buffer = data;
 		source.connect(context.destination);
-		// sync = sync < context.currentTime ? context.currentTime : sync;
-		sync = sync == 0 ? 4 : sync;
+		sync = sync < context.currentTime ? context.currentTime : sync;
 		console.log("Current sync : " + sync);
 		source.start(sync);
-		console.log("Duration : " + source.buffer.duration);
 		sync += source.buffer.duration;
 		console.log("Next sync : " + sync);
 	}, function(e) {
