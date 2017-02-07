@@ -35,7 +35,7 @@ function connectWebsocket() {
 		websocket.onmessage = function(event) {
 			var dataView = new DataView(event.data);
 			var idx = dataView.getUint32(0);
-			var data = event.data.slice(4);
+			var data = event.data.slice(4); // first 4 bytes are the position
 
 			var part = {
 				idx : idx,
